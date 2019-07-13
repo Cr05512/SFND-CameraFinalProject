@@ -197,6 +197,9 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
     std::vector<LidarPoint> prevFiltered = RansacPlane(lidarPointsPrev,70,0.1);
     std::vector<LidarPoint> currFiltered = RansacPlane(lidarPointsCurr,70,0.1);
 
+
+    // I use ransac in order to fit the car tail plane
+
     // find closest distance to Lidar points within ego lane
     double minXPrev = 1e9, minXCurr = 1e9;
     for (auto it = prevFiltered.begin(); it != prevFiltered.end(); ++it)
