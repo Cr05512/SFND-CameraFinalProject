@@ -191,41 +191,34 @@ void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPo
 void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
                      std::vector<LidarPoint> &lidarPointsCurr, double frameRate, double &TTC)
 {
-    /* float dPrev = 1e8, dCurr = 1e8; //distances of the CAS-equipped car from the closest point at the previous time and the closest point at the current time
-    //In order to find those distances we should iterate over lidar points, filter out outliers and take the closest point belonging to the object of interest
-    float prevEuclideanMean = 0, currEuclideanMean = 0; //let us compute the euclidean mean of the provided lidar points and then discard all the points falling too far from this value
-    vector<LidarPoint> filteredLidarPointsPrev, filteredLidarPointsCurr;
-    float threshold = 1.5;
-    
-    for(int i=0; i<lidarPointsPrev.size(); i++){
-        prevEuclideanMean += lidarPointsPrev[i].x;
-    }
-    prevEuclideanMean = prevEuclideanMean/lidarPointsPrev.size();
-    for(int i=0; i<lidarPointsPrev.size(); i++){
-        if(abs(lidarPointsPrev[i].x-prevEuclideanMean)<threshold && lidarPointsPrev[i].r>0.5){
-            filteredLidarPointsPrev.push_back(lidarPointsPrev[i]);
+    // auxiliary variables
+    double dT = 0.1;        // time between two measurements in seconds
+    double laneWidth = 4.0; // assumed width of the ego lane
+    std::vector<LidarPoint> prevFiltered = RansacPlane(lidarPointsPrev,70,0.1);
+    std::vector<LidarPoint> currFiltered = RansacPlane(lidarPointsCurr,70,0.1);
+
+    // find closest distance to Lidar points within ego lane
+    double minXPrev = 1e9, minXCurr = 1e9;
+    for (auto it = prevFiltered.begin(); it != prevFiltered.end(); ++it)
+    {
+        
+        if (abs(it->y) <= laneWidth / 2.0)
+        { // 3D point within ego lane?
+            minXPrev = minXPrev > it->x ? it->x : minXPrev;
         }
     }
 
-    for(int j=0; j<lidarPointsCurr.size(); j++){
-        currEuclideanMean += lidarPointsCurr[j].x;
-    }
-    currEuclideanMean = currEuclideanMean/lidarPointsCurr.size();
-    for(int j=0; j<lidarPointsCurr.size(); j++){
-        if(abs(lidarPointsCurr[j].x-currEuclideanMean)<threshold && lidarPointsCurr[j].r>0.5){
-            filteredLidarPointsCurr.push_back(lidarPointsCurr[j]);
+    for (auto it = currFiltered.begin(); it != currFiltered.end(); ++it)
+    {
+
+        if (abs(it->y) <= laneWidth / 2.0)
+        { // 3D point within ego lane?
+            minXCurr = minXCurr > it->x ? it->x : minXCurr;
         }
     }
 
-    for(auto it=filteredLidarPointsPrev.begin(); it!=filteredLidarPointsPrev.end(); ++it) {
-        dPrev = dPrev>it->x ? it->x : dPrev;
-    }
-
-    for(auto it=filteredLidarPointsCurr.begin(); it!=filteredLidarPointsCurr.end(); ++it) {
-        dCurr = dCurr>it->x ? it->x : dCurr;
-    }
-
-    TTC = dCurr*(1/frameRate)/(dPrev - dCurr); */
+    // compute TTC from both measurements
+    TTC = minXCurr * dT / (minXPrev - minXCurr);
 }
 
 
@@ -233,25 +226,23 @@ void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bb
 {
     uint bins[currFrame.boundingBoxes.size()][prevFrame.boundingBoxes.size()];
     memset(bins, 0, sizeof(bins[0][0]) * currFrame.boundingBoxes.size() * prevFrame.boundingBoxes.size());
-    uint threshold = 5;
+    uint threshold = 1;
     uint max = 0, indMax = 0;
     bool processed[prevFrame.boundingBoxes.size()];
     memset(processed, false, sizeof(bool)*prevFrame.boundingBoxes.size());
 
-    for(int iCurr=0; iCurr<currFrame.boundingBoxes.size(); iCurr++){
-        for(int iPrev=0; iPrev<prevFrame.boundingBoxes.size(); iPrev++){
-            for(int i=0; i<matches.size(); i++){
+    for(auto itCurr = currFrame.boundingBoxes.begin(); itCurr!=currFrame.boundingBoxes.end(); ++itCurr){
+        for(auto itPrev = prevFrame.boundingBoxes.begin(); itPrev!=prevFrame.boundingBoxes.end(); ++itPrev){
+             for(auto itMatch = matches.begin(); itMatch != matches.end(); ++itMatch){
+                 
+                 if(itCurr->roi.contains(currFrame.keypoints[itMatch->trainIdx].pt)){
 
-                if(currFrame.boundingBoxes[iCurr].roi.contains(currFrame.keypoints[matches[i].trainIdx].pt)){
-                    currFrame.boundingBoxes[iCurr].keypoints.push_back(currFrame.keypoints[matches[i].trainIdx]); //This will add to the bounding box all the contained points
-                    
-                    if(prevFrame.boundingBoxes[iPrev].roi.contains(prevFrame.keypoints[matches[i].queryIdx].pt)){
-                        
-                        bins[iCurr][iPrev]++;
-                    }
+                    if(itPrev->roi.contains(prevFrame.keypoints[itMatch->queryIdx].pt)){   
+
+                         bins[itCurr->boxID][itPrev->boxID]++;
+                     }
                 }
-
-            }
+             }
         }
     }
 
@@ -265,8 +256,8 @@ void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bb
         }
         //cout << endl;
         if(max>threshold && !processed[indMax]){
-            bbBestMatches.insert({currFrame.boundingBoxes[i].boxID,prevFrame.boundingBoxes[indMax].boxID});
-            //cout << currFrame.boundingBoxes[i].boxID << "," << prevFrame.boundingBoxes[indMax].boxID << endl;
+            bbBestMatches.insert({prevFrame.boundingBoxes[indMax].boxID,currFrame.boundingBoxes[i].boxID});
+            //std::cout << currFrame.boundingBoxes[i].boxID << "," << prevFrame.boundingBoxes[indMax].boxID << std::endl;
             processed[indMax] = true;
         }
         max = 0;
@@ -275,3 +266,61 @@ void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bb
 
 
 }
+
+std::vector<LidarPoint> RansacPlane(std::vector<LidarPoint> lidarPoints, int maxIterations, float distanceTol){
+   
+    srand(time(NULL));
+    std::vector<LidarPoint> inliersResult;
+    std::vector<LidarPoint> tempSet;
+
+    float coefficients[4] = {0.0,0.0,0.0,0.0};
+
+    std::vector<double> v1, v2, v3;
+    std::vector<LidarPoint> samples;
+
+    int cloudSize = lidarPoints.size();
+    // For max iterations
+    float distance = 0;
+    for (int i=0; i<maxIterations; i++){
+    // Randomly sample subset and fit plane
+        samples.push_back(lidarPoints[rand()%cloudSize]);
+        samples.push_back(lidarPoints[rand()%cloudSize]);
+        samples.push_back(lidarPoints[rand()%cloudSize]);
+        
+
+        v1 = {samples[1].x - samples[0].x, samples[1].y - samples[0].y, samples[1].z - samples[0].z};
+        v2 = {samples[2].x - samples[0].x, samples[2].y - samples[0].y, samples[2].z - samples[0].z};
+        v3 = crossProd(v1,v2);
+
+        coefficients[0] = v3[0];
+        coefficients[1] = v3[1];
+        coefficients[2] = v3[2];
+        coefficients[3] = -(v3[0]*samples[0].x + v3[1]*samples[0].y + v3[2]*samples[0].z);
+        
+        // Measure distance between every point and fitted plane
+        for(int j = 0; j<cloudSize; j++){
+            distance = abs(coefficients[0]*lidarPoints[j].x + coefficients[1]*lidarPoints[j].y +
+                           coefficients[2]*lidarPoints[j].z + coefficients[3])/sqrt(pow(coefficients[0],2)+pow(coefficients[1],2) + pow(coefficients[2],2));
+            if(distance <= distanceTol){
+                tempSet.push_back(lidarPoints[j]);
+            }
+        }
+        if(tempSet.size()>inliersResult.size()){
+            inliersResult = tempSet;
+        }
+        tempSet.clear();
+        samples.clear();
+
+    }
+    // Return indicies of inliers from fitted line with most inliers
+    
+    return inliersResult;
+}
+
+std::vector<double> crossProd(std::vector<double> const& v1, std::vector<double> const& v2){
+    std::vector<double> result = {v1[1]*v2[2] - v1[2]*v2[1],
+            v1[2]*v2[0] - v1[0]*v2[2],
+            v1[0]*v2[1] - v1[1]*v2[0]};
+    return result;
+}
+

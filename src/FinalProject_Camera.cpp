@@ -133,7 +133,7 @@ int main(int argc, const char *argv[])
         bVis = true;
         if(bVis)
         {
-            show3DObjects((dataBuffer.end()-1)->boundingBoxes, cv::Size(6.0, 30.0), cv::Size(1600, 900), true);
+            show3DObjects((dataBuffer.end()-1)->boundingBoxes, cv::Size(8.0, 40.0), cv::Size(1600, 900), true);
         }
         bVis = false;
 
@@ -291,7 +291,7 @@ int main(int argc, const char *argv[])
                         cv::namedWindow(windowName, 4);
                         cv::imshow(windowName, visImg);
                         cout << "Press key to continue to next frame" << endl;
-                        cv::waitKey(0);
+                        cv::waitKey(500);
                     }
                     bVis = false;
 
