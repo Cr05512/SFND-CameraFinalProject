@@ -69,7 +69,7 @@ int main(int argc, const char *argv[])
     P_rect_00.at<double>(2,0) = 0.000000e+00; P_rect_00.at<double>(2,1) = 0.000000e+00; P_rect_00.at<double>(2,2) = 1.000000e+00; P_rect_00.at<double>(2,3) = 0.000000e+00;    
 
     // misc
-    double sensorFrameRate = 10.0 / imgStepWidth; // frames per second for Lidar and camera
+    double sensorFrameRate = 10.0 / imgStepWidth; // frames per second for Lidar and camera (10FPS -> delta_t = 0.1)
     int dataBufferSize = 2;       // no. of images which are held in memory (ring buffer) at the same time
     vector<DataFrame> dataBuffer; // list of data frames which are held in memory at the same time
     bool bVis = false;            // visualize results
@@ -291,7 +291,7 @@ int main(int argc, const char *argv[])
                         cv::namedWindow(windowName, 4);
                         cv::imshow(windowName, visImg);
                         cout << "Press key to continue to next frame" << endl;
-                        cv::waitKey(500);
+                        cv::waitKey(0);
                     }
                     bVis = false;
 

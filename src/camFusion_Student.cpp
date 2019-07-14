@@ -134,14 +134,12 @@ void show3DObjects(std::vector<BoundingBox> &boundingBoxes, cv::Size worldSize, 
 void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, std::vector<cv::DMatch> &kptMatches)
 {
 
-    std::vector<cv::KeyPoint> containedKeypoints;
     std::vector<cv::DMatch> containedMatches;
 
     for(auto itMatch = kptMatches.begin(); itMatch != kptMatches.end(); ++itMatch){
                  
         if(boundingBox.roi.contains(kptsCurr[itMatch->trainIdx].pt)){
 
-            containedKeypoints.push_back(kptsCurr[itMatch->trainIdx]);
             containedMatches.push_back(*itMatch);
         }
     }
@@ -150,26 +148,25 @@ void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint
     float mean, test;
     float threshold = 1.3;
     
-    for(int i=0; i<containedKeypoints.size(); i++){
+    for(int i=0; i<containedMatches.size(); i++){
         mean = 0;
-        for(int j=0; j<containedKeypoints.size(); j++){
-            mean += sqrt(pow(containedKeypoints[j].pt.x-containedKeypoints[i].pt.x,2) + pow(containedKeypoints[j].pt.y-containedKeypoints[i].pt.y,2));
+        for(int j=0; j<containedMatches.size(); j++){
+            mean += sqrt(pow(kptsCurr[containedMatches[j].trainIdx].pt.x-kptsCurr[containedMatches[i].trainIdx].pt.x,2) + pow(kptsCurr[containedMatches[j].trainIdx].pt.y-kptsCurr[containedMatches[i].trainIdx].pt.y,2));
         }
-        mean = mean/containedKeypoints.size();
+        mean = mean/containedMatches.size();
         meanVector.push_back(mean);
     }
-    mean = accumulate(meanVector.begin(), meanVector.end(), 0.0)/containedKeypoints.size(); //Euclidean mean of keypoint distances in the current bounding box
+    mean = accumulate(meanVector.begin(), meanVector.end(), 0.0)/containedMatches.size(); //Euclidean mean of keypoint distances in the current bounding box
     //It is now possible to filter out outliers
-    //std::cout << containedKeypoints.size() << std::endl;
+    //std::cout << containedMatches.size() << std::endl;
 
-    for(int i=0; i<containedKeypoints.size(); i++){
+    for(int i=0; i<containedMatches.size(); i++){
         test = 0;
-        for(int j=0; j<containedKeypoints.size(); j++){
-            test += sqrt(pow(containedKeypoints[j].pt.x-containedKeypoints[i].pt.x,2) + pow(containedKeypoints[j].pt.y-containedKeypoints[i].pt.y,2));
+        for(int j=0; j<containedMatches.size(); j++){
+            test += sqrt(pow(kptsCurr[containedMatches[j].trainIdx].pt.x-kptsCurr[containedMatches[i].trainIdx].pt.x,2) + pow(kptsCurr[containedMatches[j].trainIdx].pt.y-kptsCurr[containedMatches[i].trainIdx].pt.y,2));
         }
-        test = test/containedKeypoints.size();
+        test = test/containedMatches.size();
         if(test <= mean*threshold){
-            boundingBox.keypoints.push_back(containedKeypoints[i]);
             boundingBox.kptMatches.push_back(containedMatches[i]);
         }
     }
@@ -233,33 +230,45 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
                      std::vector<LidarPoint> &lidarPointsCurr, double frameRate, double &TTC)
 {
     // auxiliary variables
-    double dT = 0.1;        // time between two measurements in seconds
-    double laneWidth = 4.0; // assumed width of the ego lane
-    std::vector<LidarPoint> prevFiltered = RansacPlane(lidarPointsPrev,200,0.07);
-    std::vector<LidarPoint> currFiltered = RansacPlane(lidarPointsCurr,200,0.07);
+    double dT = 1/frameRate;        // time between two measurements in seconds
+    double laneWidth = 2.0; // assumed width of the ego lane
+    std::vector<LidarPoint> prevFiltered = RansacPlane(lidarPointsPrev,400,0.22);
+    std::vector<LidarPoint> currFiltered = RansacPlane(lidarPointsCurr,400,0.22);
 
 
     // I use ransac in order to fit the car tail plane
-
+    double minXPrev = 0.0, minXCurr = 0.0;
     // find closest distance to Lidar points within ego lane
-    double minXPrev = 1e9, minXCurr = 1e9;
-    for (auto it = prevFiltered.begin(); it != prevFiltered.end(); ++it)
-    {
+    // double minXPrev = 1e9, minXCurr = 1e9;
+    // for (auto it = prevFiltered.begin(); it != prevFiltered.end(); ++it)
+    // {
         
-        if (abs(it->y) <= laneWidth / 2.0)
-        { // 3D point within ego lane?
-            minXPrev = minXPrev > it->x ? it->x : minXPrev;
-        }
-    }
+    //     if (abs(it->y) <= laneWidth / 2.0)
+    //     { // 3D point within ego lane?
+    //         minXPrev = minXPrev > it->x ? it->x : minXPrev;
+    //     }
+    // }
 
-    for (auto it = currFiltered.begin(); it != currFiltered.end(); ++it)
-    {
+    // for (auto it = currFiltered.begin(); it != currFiltered.end(); ++it)
+    // {
 
-        if (abs(it->y) <= laneWidth / 2.0)
-        { // 3D point within ego lane?
-            minXCurr = minXCurr > it->x ? it->x : minXCurr;
-        }
+    //     if (abs(it->y) <= laneWidth / 2.0)
+    //     { // 3D point within ego lane?
+    //         minXCurr = minXCurr > it->x ? it->x : minXCurr;
+    //     }
+    // }
+    std::vector<double> xValuesPrev, xValuesCurr;
+    for(int i=0; i<prevFiltered.size(); i++){
+        xValuesPrev.push_back(prevFiltered[i].x);
     }
+    minXPrev = *std::min_element(xValuesPrev.begin(), xValuesPrev.end());
+
+    for(int i=0; i<currFiltered.size(); i++){
+        xValuesCurr.push_back(currFiltered[i].x);
+    }
+    minXCurr = *std::min_element(xValuesCurr.begin(), xValuesCurr.end());
+
+    std::cout << minXPrev << "," << minXCurr << std::endl;
 
     // compute TTC from both measurements
     TTC = minXCurr * dT / (minXPrev - minXCurr);
