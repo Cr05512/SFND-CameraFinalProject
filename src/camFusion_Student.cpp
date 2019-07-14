@@ -133,7 +133,50 @@ void show3DObjects(std::vector<BoundingBox> &boundingBoxes, cv::Size worldSize, 
 // associate a given bounding box with the keypoints it contains
 void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, std::vector<cv::DMatch> &kptMatches)
 {
+
+    std::vector<cv::KeyPoint> containedKeypoints;
+    std::vector<cv::DMatch> containedMatches;
+
+    for(auto itMatch = kptMatches.begin(); itMatch != kptMatches.end(); ++itMatch){
+                 
+        if(boundingBox.roi.contains(kptsCurr[itMatch->trainIdx].pt)){
+
+            containedKeypoints.push_back(kptsCurr[itMatch->trainIdx]);
+            containedMatches.push_back(*itMatch);
+        }
+    }
+
+    std::vector<float> meanVector;
+    float mean, test;
+    float threshold = 1.3;
     
+    for(int i=0; i<containedKeypoints.size(); i++){
+        mean = 0;
+        for(int j=0; j<containedKeypoints.size(); j++){
+            mean += sqrt(pow(containedKeypoints[j].pt.x-containedKeypoints[i].pt.x,2) + pow(containedKeypoints[j].pt.y-containedKeypoints[i].pt.y,2));
+        }
+        mean = mean/containedKeypoints.size();
+        meanVector.push_back(mean);
+    }
+    mean = accumulate(meanVector.begin(), meanVector.end(), 0.0)/containedKeypoints.size(); //Euclidean mean of keypoint distances in the current bounding box
+    //It is now possible to filter out outliers
+    //std::cout << containedKeypoints.size() << std::endl;
+
+    for(int i=0; i<containedKeypoints.size(); i++){
+        test = 0;
+        for(int j=0; j<containedKeypoints.size(); j++){
+            test += sqrt(pow(containedKeypoints[j].pt.x-containedKeypoints[i].pt.x,2) + pow(containedKeypoints[j].pt.y-containedKeypoints[i].pt.y,2));
+        }
+        test = test/containedKeypoints.size();
+        if(test <= mean*threshold){
+            boundingBox.keypoints.push_back(containedKeypoints[i]);
+            boundingBox.kptMatches.push_back(containedMatches[i]);
+        }
+    }
+
+    //std::cout << boundingBox.keypoints.size() << std::endl;
+
+
 }
 
 
@@ -141,21 +184,19 @@ void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint
 void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, 
                       std::vector<cv::DMatch> kptMatches, double frameRate, double &TTC, cv::Mat *visImg)
 {
-    /* // compute distance ratios between all matched keypoints
+    // compute distance ratios between all matched keypoints
     vector<double> distRatios; // stores the distance ratios for all keypoints between curr. and prev. frame
     for (auto it1 = kptMatches.begin(); it1 != kptMatches.end() - 1; ++it1)
-    { // outer kpt. loop
+    {
 
-        // get current keypoint and its matched partner in the prev. frame
         cv::KeyPoint kpOuterCurr = kptsCurr.at(it1->trainIdx);
         cv::KeyPoint kpOuterPrev = kptsPrev.at(it1->queryIdx);
 
         for (auto it2 = kptMatches.begin() + 1; it2 != kptMatches.end(); ++it2)
-        { // inner kpt.-loop
+        {
 
-            double minDist = 100.0; // min. required distance
+            double minDist = 100.0;
 
-            // get next keypoint and its matched partner in the prev. frame
             cv::KeyPoint kpInnerCurr = kptsCurr.at(it2->trainIdx);
             cv::KeyPoint kpInnerPrev = kptsPrev.at(it2->queryIdx);
 
@@ -164,13 +205,13 @@ void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPo
             double distPrev = cv::norm(kpOuterPrev.pt - kpInnerPrev.pt);
 
             if (distPrev > std::numeric_limits<double>::epsilon() && distCurr >= minDist)
-            { // avoid division by zero
+            { 
 
                 double distRatio = distCurr / distPrev;
                 distRatios.push_back(distRatio);
             }
-        } // eof inner loop over all matched kpts
-    }     // eof outer loop over all matched kpts
+        } 
+    }     
 
     // only continue if list of distance ratios is not empty
     if (distRatios.size() == 0)
@@ -184,7 +225,7 @@ void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPo
     double medDistRatio = distRatios.size() % 2 == 0 ? (distRatios[medIndex - 1] + distRatios[medIndex]) / 2.0 : distRatios[medIndex]; // compute median dist. ratio to remove outlier influence
 
     float dT = 1 / frameRate;
-    TTC = -dT / (1 - medDistRatio); */
+    TTC = -dT / (1 - medDistRatio);
 }
 
 
@@ -194,8 +235,8 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
     // auxiliary variables
     double dT = 0.1;        // time between two measurements in seconds
     double laneWidth = 4.0; // assumed width of the ego lane
-    std::vector<LidarPoint> prevFiltered = RansacPlane(lidarPointsPrev,70,0.1);
-    std::vector<LidarPoint> currFiltered = RansacPlane(lidarPointsCurr,70,0.1);
+    std::vector<LidarPoint> prevFiltered = RansacPlane(lidarPointsPrev,200,0.07);
+    std::vector<LidarPoint> currFiltered = RansacPlane(lidarPointsCurr,200,0.07);
 
 
     // I use ransac in order to fit the car tail plane
