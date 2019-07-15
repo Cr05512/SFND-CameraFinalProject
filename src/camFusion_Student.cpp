@@ -134,46 +134,13 @@ void show3DObjects(std::vector<BoundingBox> &boundingBoxes, cv::Size worldSize, 
 void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, std::vector<cv::DMatch> &kptMatches)
 {
 
-    std::vector<cv::DMatch> containedMatches;
-
     for(auto itMatch = kptMatches.begin(); itMatch != kptMatches.end(); ++itMatch){
                  
         if(boundingBox.roi.contains(kptsCurr[itMatch->trainIdx].pt)){
 
-            containedMatches.push_back(*itMatch);
+            boundingBox.kptMatches.push_back(*itMatch);
         }
     }
-
-    std::vector<float> meanVector;
-    float mean, test;
-    float threshold = 1.3;
-    
-    for(int i=0; i<containedMatches.size(); i++){
-        mean = 0;
-        for(int j=0; j<containedMatches.size(); j++){
-            mean += sqrt(pow(kptsCurr[containedMatches[j].trainIdx].pt.x-kptsCurr[containedMatches[i].trainIdx].pt.x,2) + pow(kptsCurr[containedMatches[j].trainIdx].pt.y-kptsCurr[containedMatches[i].trainIdx].pt.y,2));
-        }
-        mean = mean/containedMatches.size();
-        meanVector.push_back(mean);
-    }
-    mean = accumulate(meanVector.begin(), meanVector.end(), 0.0)/containedMatches.size(); //Euclidean mean of keypoint distances in the current bounding box
-    //It is now possible to filter out outliers
-    //std::cout << containedMatches.size() << std::endl;
-
-    for(int i=0; i<containedMatches.size(); i++){
-        test = 0;
-        for(int j=0; j<containedMatches.size(); j++){
-            test += sqrt(pow(kptsCurr[containedMatches[j].trainIdx].pt.x-kptsCurr[containedMatches[i].trainIdx].pt.x,2) + pow(kptsCurr[containedMatches[j].trainIdx].pt.y-kptsCurr[containedMatches[i].trainIdx].pt.y,2));
-        }
-        test = test/containedMatches.size();
-        if(test <= mean*threshold){
-            boundingBox.kptMatches.push_back(containedMatches[i]);
-        }
-    }
-
-    //std::cout << boundingBox.keypoints.size() << std::endl;
-
-
 }
 
 
@@ -237,26 +204,26 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
 
 
     // I use ransac in order to fit the car tail plane
-    double minXPrev = 0.0, minXCurr = 0.0;
-    // find closest distance to Lidar points within ego lane
-    // double minXPrev = 1e9, minXCurr = 1e9;
-    // for (auto it = prevFiltered.begin(); it != prevFiltered.end(); ++it)
-    // {
+    //double minXPrev = 0.0, minXCurr = 0.0;
+    //find closest distance to Lidar points within ego lane
+    double minXPrev = 1e9, minXCurr = 1e9;
+    for (auto it = prevFiltered.begin(); it != prevFiltered.end(); ++it)
+    {
         
-    //     if (abs(it->y) <= laneWidth / 2.0)
-    //     { // 3D point within ego lane?
-    //         minXPrev = minXPrev > it->x ? it->x : minXPrev;
-    //     }
-    // }
+        if (abs(it->y) <= laneWidth / 2.0)
+        { // 3D point within ego lane?
+            minXPrev = minXPrev > it->x ? it->x : minXPrev;
+        }
+    }
 
-    // for (auto it = currFiltered.begin(); it != currFiltered.end(); ++it)
-    // {
+    for (auto it = currFiltered.begin(); it != currFiltered.end(); ++it)
+    {
 
-    //     if (abs(it->y) <= laneWidth / 2.0)
-    //     { // 3D point within ego lane?
-    //         minXCurr = minXCurr > it->x ? it->x : minXCurr;
-    //     }
-    // }
+        if (abs(it->y) <= laneWidth / 2.0)
+        { // 3D point within ego lane?
+            minXCurr = minXCurr > it->x ? it->x : minXCurr;
+        }
+    }
     std::vector<double> xValuesPrev, xValuesCurr;
     for(int i=0; i<prevFiltered.size(); i++){
         xValuesPrev.push_back(prevFiltered[i].x);
@@ -268,7 +235,7 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
     }
     minXCurr = *std::min_element(xValuesCurr.begin(), xValuesCurr.end());
 
-    std::cout << minXPrev << "," << minXCurr << std::endl;
+    //std::cout << minXPrev << "," << minXCurr << std::endl;
 
     // compute TTC from both measurements
     TTC = minXCurr * dT / (minXPrev - minXCurr);
