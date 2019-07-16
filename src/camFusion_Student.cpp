@@ -190,6 +190,8 @@ void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPo
 
     float dT = 1 / frameRate;
     TTC = -dT / (1 - medDistRatio);
+
+    std::cout << TTC << std::endl;
 }
 
 

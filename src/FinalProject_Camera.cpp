@@ -39,6 +39,9 @@ int main(int argc, const char *argv[])
     int imgStepWidth = 1; 
     int imgFillWidth = 4;  // no. of digits which make up the file index (e.g. img-0001.png)
 
+    string detectorName = "AKAZE";
+    string descriptorName = "SIFT"; // BRISK, BRIEF, ORB, FREAK, AKAZE, SIFT
+
     // object detection
     string yoloBasePath = dataPath + "dat/yolo/";
     string yoloClassesFile = yoloBasePath + "coco.names";
@@ -151,14 +154,13 @@ int main(int argc, const char *argv[])
 
         // extract 2D keypoints from current image
         vector<cv::KeyPoint> keypoints; // create empty feature list for current image
-        string detectorName = "SHITOMASI";
+        
 
         if (detectorName.compare("SHITOMASI") == 0){
 
             detKeypointsShiTomasi(keypoints, imgGray, tDetector, bVis);
         }
-        else if (detectorName.compare("HARRIS") == 0){
-            
+        else if(detectorName.compare("HARRIS") == 0){
             detKeypointsHarris(keypoints, imgGray, tDetector, bVis);
         }
         else{
@@ -190,7 +192,7 @@ int main(int argc, const char *argv[])
         /* EXTRACT KEYPOINT DESCRIPTORS */
 
         cv::Mat descriptors;
-        string descriptorName = "BRIEF"; // BRISK, BRIEF, ORB, FREAK, AKAZE, SIFT
+        
         if(descriptorName.compare("AKAZE") == 0 && detectorName.compare(descriptorName) != 0){
             cout << "Akaze descriptors can be used only with Akaze/Kaze Keypoints" << endl;
             return 0;
