@@ -139,6 +139,7 @@ void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint
         if(boundingBox.roi.contains(kptsCurr[itMatch->trainIdx].pt)){
 
             boundingBox.kptMatches.push_back(*itMatch);
+            boundingBox.keypoints.push_back(kptsCurr.at(itMatch->trainIdx));
         }
     }
 }
@@ -190,8 +191,6 @@ void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPo
 
     float dT = 1 / frameRate;
     TTC = -dT / (1 - medDistRatio);
-
-    std::cout << TTC << std::endl;
 }
 
 
