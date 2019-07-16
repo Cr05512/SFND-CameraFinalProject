@@ -46,5 +46,7 @@ FP.2 in order to compute the TTC using lidar, it is necessary to filter out the 
   second check is performed to remove all the points that are outside the ego lane. By finding now  
   the minimum x values in both the clouds it is possible to compute the TTC for the lidar sensor.
   
-FP.3 
+FP.3 - FP.4 in this section the task is to associate matches with corresponding bounding boxes and by computing how they shrink or expand over consequent frames. This will allow to compute the camera TTC. In order to address this problem, we first use the function `clusterKptMatchesWithROI` which takes as input the current bounding box, both the previous and current keypoints from the consequent frames together with the corresponding matches. A loop over all the latters is performed and, only if the keypoints are inside the current bounding box, the relative match is pushed into the kptsMatches vector. At this point an outlier filtering is applied in the `computeTTCCamera` function by looping over all the distances between keypoints belonging to the bbox and by computing the distance ratios between all of them. At this point, the median distance ratio is computed to filter out erroneous points. The median distance ration will be used in the TTC final formula which will be now statistically robust against outliers.
+
+FP.5 
   
