@@ -24,5 +24,27 @@
 1. Clone this repo.
 2. Make a build directory in the top level project directory: `mkdir build && cd build`
 3. Compile: `cmake .. && make`
-4. Run it: `./3D_object_tracking`.
-# SFND-CameraFinalProject
+4. Run it: `./3D_object_tracking`
+
+# SFND-CameraFinalProject Final Report
+
+FP.1 the matchBoundingBoxes function as been implemented as follows:  
+- A voting structure called bins is initialized to zero and its dimensions are the # bboxes in the current frame times  
+  the number of bboxes in the previous frame
+- Some other support variables are initialized, like a vector to keep track of the "paired" bboxes  
+- By looping over all the matches, if the keypoints linked to a match falls into the current and the previous  
+  bboxes under test, the corresponding row-column value in the voting structure is incremented (number of occurrences)
+- Now the maximum value for every row is taken and together the index associated with it  
+- If this combination of bounding boxes has not been paired yet and the number of occurrences is greater than  
+  a threshold (in this case set to zero -> at least one occurrence) then the bbox combination is stored in the  
+  map.  
+
+FP.2 in order to compute the TTC using lidar, it is necessary to filter out the outliers in order  
+  to avoid erroneus measurements for the minimum x value from the cloud. Hence, a ransac fitting  
+  a plane has been implemented to match the plane crossing the back of the car and by tuning the  
+  tolerance until the obtained values where coherent with manually measured ones. Furthermore, a  
+  second check is performed to remove all the points that are outside the ego lane. By finding now  
+  the minimum x values in both the clouds it is possible to compute the TTC for the lidar sensor.
+  
+FP.3 
+  
