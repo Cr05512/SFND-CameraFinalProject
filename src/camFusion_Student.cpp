@@ -136,7 +136,7 @@ void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint
 
     for(auto itMatch = kptMatches.begin(); itMatch != kptMatches.end(); ++itMatch){
                  
-        if(boundingBox.roi.contains(kptsCurr[itMatch->trainIdx].pt)){
+        if(boundingBox.roi.contains(kptsCurr[itMatch->trainIdx].pt) && boundingBox.roi.contains(kptsPrev[itMatch->queryIdx].pt)){
 
             boundingBox.kptMatches.push_back(*itMatch);
             boundingBox.keypoints.push_back(kptsCurr.at(itMatch->trainIdx));
@@ -200,12 +200,11 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
     // auxiliary variables
     double dT = 1/frameRate;        // time between two measurements in seconds
     double laneWidth = 2.0; // assumed width of the ego lane
-    std::vector<LidarPoint> prevFiltered = RansacPlane(lidarPointsPrev,400,0.22);
-    std::vector<LidarPoint> currFiltered = RansacPlane(lidarPointsCurr,400,0.22);
+    std::vector<LidarPoint> prevFiltered = RansacPlane(lidarPointsPrev,100,0.22);
+    std::vector<LidarPoint> currFiltered = RansacPlane(lidarPointsCurr,100,0.22);
 
 
     // I use ransac in order to fit the car tail plane
-    //double minXPrev = 0.0, minXCurr = 0.0;
     //find closest distance to Lidar points within ego lane
     double minXPrev = 1e9, minXCurr = 1e9;
     for (auto it = prevFiltered.begin(); it != prevFiltered.end(); ++it)
@@ -225,16 +224,17 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
             minXCurr = minXCurr > it->x ? it->x : minXCurr;
         }
     }
-    std::vector<double> xValuesPrev, xValuesCurr;
-    for(int i=0; i<prevFiltered.size(); i++){
-        xValuesPrev.push_back(prevFiltered[i].x);
-    }
-    minXPrev = *std::min_element(xValuesPrev.begin(), xValuesPrev.end());
+    //double minXPrev = 0.0, minXCurr = 0.0;
+    // std::vector<double> xValuesPrev, xValuesCurr;
+    // for(int i=0; i<prevFiltered.size(); i++){
+    //     xValuesPrev.push_back(prevFiltered[i].x);
+    // }
+    // minXPrev = *std::min_element(xValuesPrev.begin(), xValuesPrev.end());
 
-    for(int i=0; i<currFiltered.size(); i++){
-        xValuesCurr.push_back(currFiltered[i].x);
-    }
-    minXCurr = *std::min_element(xValuesCurr.begin(), xValuesCurr.end());
+    // for(int i=0; i<currFiltered.size(); i++){
+    //     xValuesCurr.push_back(currFiltered[i].x);
+    // }
+    // minXCurr = *std::min_element(xValuesCurr.begin(), xValuesCurr.end());
 
     //std::cout << minXPrev << "," << minXCurr << std::endl;
 
@@ -276,7 +276,7 @@ void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bb
             //cout << bins[i][j] << " "; //Uncomment this and the endl below to print the voting structure
         }
         //cout << endl;
-        if(max>threshold && !processed[indMax]){
+        if(max>=threshold && !processed[indMax]){
             bbBestMatches.insert({prevFrame.boundingBoxes[indMax].boxID,currFrame.boundingBoxes[i].boxID});
             //std::cout << currFrame.boundingBoxes[i].boxID << "," << prevFrame.boundingBoxes[indMax].boxID << std::endl;
             processed[indMax] = true;

@@ -82,7 +82,7 @@ void descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descr
     }
     else if (descriptorType.compare("ORB") == 0){
 
-        extractor = cv::ORB::create(2000,1.2f,8,31,0,2,cv::ORB::FAST_SCORE,21,65);
+        extractor = cv::ORB::create();
     }
     else if (descriptorType.compare("FREAK") == 0){
 
@@ -241,7 +241,7 @@ void detKeypointsModern(std::vector<cv::KeyPoint> &keypoints, cv::Mat &img, std:
 
         //uint maxFeatures = 400;
         t = (double)cv::getTickCount();
-        cv::Ptr<cv::FeatureDetector> orbDetector = cv::ORB::create(2000,1.2f,8,31,0,2,cv::ORB::FAST_SCORE,21,45);
+        cv::Ptr<cv::FeatureDetector> orbDetector = cv::ORB::create();
         orbDetector->detect(img,keypoints);
         t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
         cout << "ORB detector with n= " << keypoints.size() << " keypoints in " << 1000 * t / 1.0 << " ms" << endl;
