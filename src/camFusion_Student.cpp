@@ -223,8 +223,8 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
     // auxiliary variables
     double dT = 1/frameRate;        // time between two measurements in seconds
     double laneWidth = 2.0; // assumed width of the ego lane
-    std::vector<LidarPoint> prevFiltered = RansacPlane(lidarPointsPrev,100,0.22);
-    std::vector<LidarPoint> currFiltered = RansacPlane(lidarPointsCurr,100,0.22);
+    std::vector<LidarPoint> prevFiltered = RansacPlane(lidarPointsPrev,200,0.22);
+    std::vector<LidarPoint> currFiltered = RansacPlane(lidarPointsCurr,200,0.22);
 
 
     // I use ransac in order to fit the car tail plane
