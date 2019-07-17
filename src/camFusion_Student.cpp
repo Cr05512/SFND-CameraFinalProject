@@ -134,14 +134,37 @@ void show3DObjects(std::vector<BoundingBox> &boundingBoxes, cv::Size worldSize, 
 void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, std::vector<cv::DMatch> &kptMatches)
 {
 
+    //std::vector<cv::DMatch> contMatches;
     for(auto itMatch = kptMatches.begin(); itMatch != kptMatches.end(); ++itMatch){
                  
         if(boundingBox.roi.contains(kptsCurr[itMatch->trainIdx].pt) && boundingBox.roi.contains(kptsPrev[itMatch->queryIdx].pt)){
 
             boundingBox.kptMatches.push_back(*itMatch);
             boundingBox.keypoints.push_back(kptsCurr.at(itMatch->trainIdx));
+            //contMatches.push_back(*itMatch);
         }
     }
+    // std::vector<float> euclMeansCurr;
+    // std::vector<float> euclMeansPrev;
+    // float meanCurr, meanPrev;
+    // for(int i=0; i<contMatches.size(); i++){
+    //     meanCurr = 0;
+    //     meanPrev = 0;
+    //     for(int j=0; j<contMatches.size(); j++){
+    //         meanCurr += cv::norm(kptsCurr[contMatches[j].trainIdx].pt - kptsCurr[contMatches[i].trainIdx].pt);
+    //         meanPrev += cv::norm(kptsPrev[contMatches[j].queryIdx].pt - kptsPrev[contMatches[i].queryIdx].pt);
+    //     }
+    //     euclMeansCurr.push_back(meanCurr/contMatches.size());
+    //     euclMeansPrev.push_back(meanPrev/contMatches.size());
+    // }
+    // meanCurr = std::accumulate(euclMeansCurr.begin(), euclMeansCurr.end(), 0.0)/contMatches.size();
+    // meanPrev = std::accumulate(euclMeansPrev.begin(), euclMeansPrev.end(), 0.0)/contMatches.size();
+    // for(int i=0; i<contMatches.size(); i++){
+    //     if(cv::norm(kptsCurr[contMatches[i].trainIdx].pt) <= (meanCurr/meanPrev)*cv::norm(kptsPrev[contMatches[i].queryIdx].pt) * 1.3 ){
+    //         boundingBox.kptMatches.push_back(contMatches[i]);
+    //     }
+    // }
+
 }
 
 
